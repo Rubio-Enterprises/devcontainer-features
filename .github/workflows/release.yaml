@@ -1,0 +1,27 @@
+name: Publish features
+
+on:
+  push:
+    branches: [main]
+    paths: [src/**]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      # Publishes every feature whose version is not yet in GHCR, tagged
+      # MAJOR, MAJOR.MINOR, MAJOR.MINOR.PATCH and latest. Existing versions
+      # are skipped, so a merge without a version bump publishes nothing.
+      - name: Publish features to GHCR
+        uses: devcontainers/action@1082abd5d2bf3a11abccba70eef98df068277772 # v1.4.3
+        with:
+          publish-features: "true"
+          base-path-to-features: ./src
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
