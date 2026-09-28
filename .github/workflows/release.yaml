@@ -7,7 +7,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # contents: write lets the action tag each published version in git
+  # (feature_<id>_<version>), tying a GHCR release to its source commit.
+  contents: write
   packages: write
 
 jobs:
