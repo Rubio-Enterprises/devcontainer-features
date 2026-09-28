@@ -1,0 +1,27 @@
+name: Test features
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    # Feature tests build images, so they need a Docker daemon.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+      - name: Install the Dev Container CLI
+        run: npm install -g @devcontainers/cli@0.89.0
+      - name: Test the baseline feature on the org base image
+        run: >-
+          devcontainer features test
+          --features baseline
+          --base-image mcr.microsoft.com/devcontainers/base:2.2.1-trixie
+          --skip-scenarios
+          --remote-user root
+          .
