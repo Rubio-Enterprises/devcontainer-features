@@ -13,7 +13,7 @@ feature, pinned to an exact version:
 {
   "image": "mcr.microsoft.com/devcontainers/base:2.2.1-trixie",
   "features": {
-    "ghcr.io/rubio-enterprises/devcontainer-features/baseline:1.0.0": {}
+    "ghcr.io/rubio-enterprises/devcontainer-features/baseline:1.1.0": {}
   }
 }
 ```
@@ -24,6 +24,14 @@ It provides:
   `ghcr.io/devcontainers-extra/features/mise:1` and
   `ghcr.io/devcontainers/features/github-cli:1`. The base image already ships
   git, and each repository's mise configuration installs the rest of its tools.
+- **mise's shims on `PATH`** for every process in the container: terminals,
+  lifecycle commands, VS Code tasks, `devcontainer exec`, and a plain
+  `docker exec`. A tool from the repository's mise configuration therefore runs
+  by name, without `mise exec --` or `mise activate`. `MISE_SHIMS_DIR` moves the
+  shims to `/usr/local/share/mise-shims`, owned by the remote user, so the
+  static `PATH` entry does not depend on a home directory. Shims apply a
+  repository's mise `[env]` only to the tool they launch; use `mise run` or
+  `mise exec --` where a command needs those variables.
 - **`DOTFILES_PROFILE=personal`**, which the dotfiles installer reads to choose
   the personal profile. Only Rubio-Enterprises repositories use this feature, so
   every other repository falls back to the installer's work default.

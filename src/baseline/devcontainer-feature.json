@@ -1,8 +1,8 @@
 {
   "id": "baseline",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Rubio-Enterprises baseline",
-  "description": "Shared setup for Rubio-Enterprises Dev Containers: mise, the GitHub CLI, the personal dotfiles profile, and git safe.directory for workspaces.",
+  "description": "Shared setup for Rubio-Enterprises Dev Containers: mise with its shims on PATH, the GitHub CLI, the personal dotfiles profile, and git safe.directory for workspaces.",
   "documentationURL": "https://github.com/Rubio-Enterprises/devcontainer-features/tree/main/src/baseline",
   "licenseURL": "https://github.com/Rubio-Enterprises/devcontainer-features/blob/main/LICENSE",
   "dependsOn": {
@@ -13,6 +13,8 @@
     "DOTFILES_PROFILE": "personal",
     "GIT_CONFIG_COUNT": "1",
     "GIT_CONFIG_KEY_0": "safe.directory",
-    "GIT_CONFIG_VALUE_0": "/workspaces/*"
+    "GIT_CONFIG_VALUE_0": "/workspaces/*",
+    "MISE_SHIMS_DIR": "/usr/local/share/mise-shims",
+    "PATH": "/usr/local/share/mise-shims:${PATH}"
   }
 }
