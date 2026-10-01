@@ -1,7 +1,9 @@
 #!/bin/sh
 set -e
 
-# Everything this feature provides is declarative in devcontainer-feature.json:
 # dependsOn installs mise and the GitHub CLI, and containerEnv sets the
-# environment. The spec still requires an install script.
-echo "Rubio-Enterprises baseline: nothing to install beyond dependsOn."
+# environment. MISE_SHIMS_DIR moves mise's shims out of the user's home, so the
+# static PATH entry finds them for any remote user. The remote user's
+# `mise install` writes the shims there, so that user owns the directory.
+mkdir -p "$MISE_SHIMS_DIR"
+chown "$_REMOTE_USER" "$MISE_SHIMS_DIR"

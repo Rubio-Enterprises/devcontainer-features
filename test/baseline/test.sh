@@ -24,4 +24,17 @@ make_foreign_repo /tmp/foreign-owner
 check "git trusts a foreign-owned repo under /workspaces" git -C /workspaces/foreign-owner rev-parse --git-dir
 check "git still refuses a foreign-owned repo elsewhere" bash -c '! git -C /tmp/foreign-owner rev-parse --git-dir'
 
+# A tool from mise configuration runs by name, with no `mise activate` or
+# `mise exec --`: plain `docker exec`, lifecycle commands, and tasks see only
+# the container environment. A linked fake keeps the check offline; the base
+# image ships no node.
+mkdir -p /tmp/fake-node/bin
+printf '#!/bin/sh\necho fake-node\n' >/tmp/fake-node/bin/node
+chmod +x /tmp/fake-node/bin/node
+mise link node@0.0.0-baseline /tmp/fake-node
+mise use --global node@0.0.0-baseline
+check "a mise tool runs by name without activation" test "$(cd /tmp && node)" = fake-node
+# Debian's /etc/profile resets PATH; the base image restores it for login shells.
+check "a login shell keeps the shims on PATH" test "$(cd /tmp && bash -lc node)" = fake-node
+
 reportResults
