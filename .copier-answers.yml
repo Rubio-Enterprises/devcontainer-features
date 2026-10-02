@@ -1,6 +1,6 @@
 # Changes here will be overwritten by Copier; NEVER edit this file manually.
-_commit: template/v1.55.109
-_rubio_template_version: template/v1.55.109
+_commit: template/v1.55.110
+_rubio_template_version: template/v1.55.110
 _src_path: https://github.com/Rubio-Enterprises/standards.git
 default_branch: main
 enforce_audit: true
@@ -8,9 +8,9 @@ enforce_e2e: false
 enforce_lint_format: true
 enforce_lint_hooks: true
 enforce_tests: false
-enforce_tests_reason: Feature tests build images with devcontainer features test,
-    which needs a Docker daemon; they run in the repository test.yaml workflow on
-    GitHub-hosted runners.
+enforce_tests_opt_out_reason: Feature tests build images with devcontainer features
+    test, which needs a Docker daemon; they run in the repository test.yaml workflow
+    on GitHub-hosted runners.
 enforce_typecheck: false
 enforcement_tier: experimental
 has_ansible: false
@@ -27,7 +27,6 @@ is_claude_carrier: false
 is_marketplace: false
 is_public: true
 lint_hooks_workload_class: glue
-node_version: 22.12.0
 project_name: devcontainer-features
 repo_type: native
 typecheck_workload_class: glue
