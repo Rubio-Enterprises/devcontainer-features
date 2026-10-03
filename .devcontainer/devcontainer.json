@@ -4,9 +4,5 @@
   "features": {
     "ghcr.io/rubio-enterprises/devcontainer-features/baseline:1.0.0": {}
   },
-  "hostRequirements": {
-    "cpus": 4,
-    "memory": "8gb"
-  },
   "waitFor": "postCreateCommand"
 }
