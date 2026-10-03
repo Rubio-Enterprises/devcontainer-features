@@ -13,7 +13,7 @@ feature, pinned to an exact version:
 {
   "image": "mcr.microsoft.com/devcontainers/base:2.2.1-trixie",
   "features": {
-    "ghcr.io/rubio-enterprises/devcontainer-features/baseline:1.1.0": {}
+    "ghcr.io/rubio-enterprises/devcontainer-features/baseline:2.0.0": {}
   }
 }
 ```
@@ -29,17 +29,23 @@ It provides:
   `docker exec`. A tool from the repository's mise configuration therefore runs
   by name, without `mise exec --` or `mise activate`. `MISE_SHIMS_DIR` moves the
   shims to `/usr/local/share/mise-shims`, owned by the remote user, so the
-  static `PATH` entry does not depend on a home directory. Shims apply a
+  static `PATH` entry does not depend on a home directory. On Linux hosts the
+  Dev Container CLI can remap the remote user's UID and re-owns only the home
+  directory; the feature's `onCreateCommand` then reclaims the shims directory
+  with passwordless `sudo` before any repository lifecycle command runs. On an
+  engine that starts containers with `no-new-privileges`, that repository must
+  declare `"securityOpt": ["no-new-privileges=false"]` or the container fails
+  to start; without a remap the helper never calls `sudo`. Shims apply a
   repository's mise `[env]` only to the tool they launch; use `mise run` or
   `mise exec --` where a command needs those variables.
 - **`DOTFILES_PROFILE=personal`**, which the dotfiles installer reads to choose
   the personal profile. Only Rubio-Enterprises repositories use this feature, so
   every other repository falls back to the installer's work default.
-- **git `safe.directory` for `/workspaces/*`**, set through
-  `GIT_CONFIG_COUNT`/`GIT_CONFIG_KEY_0`/`GIT_CONFIG_VALUE_0`. Bind-mounted
-  checkouts can report a foreign owner, and git then refuses to work in them.
-  git honors `safe.directory` from these variables because they are
-  command-scope configuration.
+- **git `safe.directory` for `/workspaces/*`**, added to `/etc/gitconfig`.
+  Bind-mounted checkouts can report a foreign owner, and git then refuses to
+  work in them. System scope is protected configuration, so git honors it
+  there, and the entry survives tools that pass their own `GIT_CONFIG_COUNT`.
+  The `/*` form needs git 2.46 or newer; the Trixie base image ships newer.
 
 It does not install dotfiles. The Dev Container client does that: VS Code's
 `dotfiles.repository` setting, which Settings Sync does not sync, or the
