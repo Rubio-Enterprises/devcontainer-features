@@ -10,7 +10,14 @@ set -e
 source dev-container-features-test-lib
 
 check "mise is installed" mise --version
-check "gh is installed" gh --version
+mise_version_is_supported() {
+  local version
+  version="$(mise --version | awk '{print $1}')"
+  [[ "$(printf '%s\n' 2026.9.14 "$version" | sort -V | head -n 1)" == 2026.9.14 ]]
+}
+check "mise is at least 2026.9.14 (API-free release metadata)" mise_version_is_supported
+check "mise uses the versions mirror" test "$(mise settings get use_versions_host)" = true
+check "gh is not installed" bash -c '! command -v gh'
 check "dotfiles install selects the personal profile" test "$DOTFILES_PROFILE" = personal
 
 # git refuses repositories owned by another user unless safe.directory lists
@@ -61,5 +68,11 @@ else
 fi
 check "the helper does nothing once the directory is writable" \
   as_vscode PATH=/nonexistent /bin/sh "$claim"
+
+# The generated test container is disposable and runs as root. Block the API
+# before testing real release resolution/downloads, with separate empty caches.
+printf '\n127.0.0.1 api.github.com\n' >>/etc/hosts
+check "fresh GitHub/aqua tools install without GitHub API calls" \
+  bash "$(dirname "${BASH_SOURCE[0]}")/no-github-api.sh"
 
 reportResults
