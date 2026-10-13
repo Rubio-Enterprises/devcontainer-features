@@ -2,7 +2,16 @@
 
 Dev Container Features for Rubio-Enterprises repositories, published to GHCR.
 
-## baseline
+## Table of Contents
+
+- [Install](#install)
+- [Usage](#usage)
+- [Test](#test)
+- [Release](#release)
+- [Contributing](#contributing)
+- [License](#license)
+
+## Install
 
 `ghcr.io/rubio-enterprises/devcontainer-features/baseline` is the shared setup
 every Rubio-Enterprises Dev Container carries. A repository's
@@ -17,6 +26,18 @@ feature, pinned to an exact version:
   }
 }
 ```
+
+## Usage
+
+Rebuild the Dev Container after adding the feature. Inside the container, install
+and use the repository's tools through mise:
+
+```sh
+mise install
+mise tasks
+```
+
+### baseline
 
 It provides:
 
@@ -68,3 +89,21 @@ request as the change. On merge, `.github/workflows/release.yaml` publishes
 every feature whose version is not in GHCR yet, tagged `MAJOR`,
 `MAJOR.MINOR`, `MAJOR.MINOR.PATCH`, and `latest`. Consumers pin the exact
 version, and Renovate's devcontainer manager proposes updates.
+
+## Contributing
+
+Organization changes go through pull requests following
+[the PR template](.github/PULL_REQUEST_TEMPLATE.md): a Conventional Commits title,
+a linked work item, and What?, Why?, How? and Testing? sections. Use repository
+issues for questions and include the template's feedback and dependency context
+when relevant.
+
+Run `mise install` to provision the tools and hooks, and check Markdown with
+`mise exec -- markdownlint-cli2 README.md`. There is no `mise run lint` or
+`mise run test` task; use the feature test command above with a Docker daemon.
+For changes under `src/<feature>/`, bump that feature's version in the same PR;
+removing an option or environment variable requires a major bump.
+
+## License
+
+[MIT](LICENSE) © 2026 Rubio Enterprises.
