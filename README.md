@@ -22,7 +22,7 @@ feature, pinned to an exact version:
 {
   "image": "mcr.microsoft.com/devcontainers/base:2.2.1-trixie",
   "features": {
-    "ghcr.io/rubio-enterprises/devcontainer-features/baseline:2.0.0": {}
+    "ghcr.io/rubio-enterprises/devcontainer-features/baseline:3.0.0": {}
   }
 }
 ```
@@ -41,10 +41,17 @@ mise tasks
 
 It provides:
 
-- **mise and the GitHub CLI**, through `dependsOn` on
-  `ghcr.io/devcontainers-extra/features/mise:1` and
-  `ghcr.io/devcontainers/features/github-cli:1`. The base image already ships
-  git, and each repository's mise configuration installs the rest of its tools.
+- **Pinned, signature-verified mise** (2026.10.9), installed into
+  `/usr/local/bin` from GitHub release downloads for Linux arm64/x64. Debian's
+  `minisign` verifies the checksum manifest against the pinned
+  [upstream public key](https://mise.jdx.dev/installing-mise.html#github-releases),
+  then SHA-256 verifies the tarball before extraction. Verification failures stop
+  the build. No GitHub API calls, credentials, or `curl | sh` are needed.
+  `MISE_USE_VERSIONS_HOST=true` keeps public GitHub release metadata on mise's
+  versions mirror (requires mise >= 2026.9.14). Upstream can still fall back to
+  the API on mirror misses; this is not an API firewall. The base image ships git,
+  and each repository's mise configuration installs the rest of its tools.
+  The GitHub CLI is no longer installed: run authenticated git/gh on the host.
 - **mise's shims on `PATH`** for every process in the container: terminals,
   lifecycle commands, VS Code tasks, `devcontainer exec`, and a plain
   `docker exec`. A tool from the repository's mise configuration therefore runs
@@ -70,7 +77,10 @@ It provides:
 
 It does not install dotfiles. The Dev Container client does that: VS Code's
 `dotfiles.repository` setting, which Settings Sync does not sync, or the
-CLI's `--dotfiles-repository`.
+CLI's `--dotfiles-repository`. A dotfiles-installed `~/.local/bin/mise` can
+shadow this feature's binary: it must also be >= 2026.9.14. Check
+`command -v mise` and `mise --version` after personalization. Version 3 removes
+the GitHub CLI, a breaking change for consumers that used it in-container.
 
 ## Test
 
@@ -80,7 +90,27 @@ devcontainer features test --features baseline \
   --remote-user root .
 ```
 
-The tests run as root because they create repositories owned by another user, and they need a Docker daemon. CI runs them in `.github/workflows/test.yaml`.
+The tests run as root because they create repositories owned by another user,
+and they need a Docker daemon. CI runs them in `.github/workflows/test.yaml`.
+They also block `api.github.com` in the disposable container and install
+`github:sharkdp/fd`, `aqua:jqlang/jq`, and `aqua:BurntSushi/ripgrep` from empty
+caches without credentials, rejecting API request URLs in mise's trace.
+Use aqua for jq: the generic GitHub backend's default `v` tag prefix turns
+`jq-1.8.2` into a nonexistent `vjq-1.8.2` and triggers API fallback.
+
+For installer tampering checks, build a throwaway image with baseline and run
+the additional script as root (replace `sol-baseline:verified` with that image):
+
+```bash
+docker --context colima-dev run --rm --name sol-baseline-tamper \
+  --add-host api.github.com:127.0.0.1 \
+  -v "$PWD/src/baseline:/tmp/baseline:ro" \
+  -v "$PWD/test/baseline/verification-failures.sh:/tmp/verification-failures.sh:ro" \
+  sol-baseline:verified bash /tmp/verification-failures.sh
+```
+
+This exercises the actual installer, rejecting corrupt signatures and tarballs
+without replacing the existing mise executable.
 
 ## Release
 
@@ -89,6 +119,17 @@ request as the change. On merge, `.github/workflows/release.yaml` publishes
 every feature whose version is not in GHCR yet, tagged `MAJOR`,
 `MAJOR.MINOR`, `MAJOR.MINOR.PATCH`, and `latest`. Consumers pin the exact
 version, and Renovate's devcontainer manager proposes updates.
+
+The repo-local regex manager tracks the annotated `MISE_VERSION` pin in
+`src/baseline/install.sh` using `github-releases` for `jdx/mise`, stripping the
+tag's `v` prefix. A scoped
+[Renovate `bumpVersions` rule](https://docs.renovatebot.com/configuration-options/#bumpversions)
+patch-bumps baseline's feature version in the same PR, so merging publishes the
+new binary. This generic mechanism is experimental; `bumpVersion` does not
+support the regex manager. Review each mise PR for both edits; if the bot omits
+the bump, manually increment `src/baseline/devcontainer-feature.json`'s patch
+version before merge. The release workflow does not invent versions or commit
+back to main. Breaking feature changes still require a reviewed major bump.
 
 ## Contributing
 

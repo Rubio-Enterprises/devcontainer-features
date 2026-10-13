@@ -3,5 +3,33 @@
   "extends": ["github>Rubio-Enterprises/.github"],
   "devcontainer": {
     "managerFilePatterns": ["/(^|/)\\.devcontainer/devcontainer\\.json$/"]
-  }
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^src\\/baseline\\/install\\.sh$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+MISE_VERSION=(?<currentValue>\\d+\\.\\d+\\.\\d+)"
+      ],
+      "extractVersionTemplate": "^v(?<version>.*)$",
+      "versioningTemplate": "semver"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["custom.regex"],
+      "matchDepNames": ["jdx/mise"],
+      "matchFileNames": ["src/baseline/install.sh"],
+      "bumpVersions": [
+        {
+          "name": "baseline release for mise update",
+          "filePatterns": ["src/baseline/devcontainer-feature.json"],
+          "matchStrings": [
+            "\"version\":\\s*\"(?<version>\\d+\\.\\d+\\.\\d+)\""
+          ],
+          "bumpType": "patch"
+        }
+      ]
+    }
+  ]
 }
