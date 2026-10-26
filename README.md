@@ -22,7 +22,7 @@ feature, pinned to an exact version:
 {
   "image": "mcr.microsoft.com/devcontainers/base:2.2.1-trixie",
   "features": {
-    "ghcr.io/rubio-enterprises/devcontainer-features/baseline:3.0.0": {}
+    "ghcr.io/rubio-enterprises/devcontainer-features/baseline:3.0.1": {}
   }
 }
 ```
@@ -33,7 +33,8 @@ Rebuild the Dev Container after adding the feature. Inside the container, instal
 and use the repository's tools through mise:
 
 ```sh
-mise install
+mise trust
+mise bootstrap --only repos,tools --yes
 mise tasks
 ```
 
@@ -79,7 +80,7 @@ It provides:
 It does not install dotfiles. The Dev Container client does that: VS Code's
 `dotfiles.repository` setting, which Settings Sync does not sync, or the
 CLI's `--dotfiles-repository`. A dotfiles-installed `~/.local/bin/mise` can
-shadow this feature's binary: it must also be >= 2026.9.14. Check
+shadow this feature's binary: it must also be >= 2026.10.19 for native config. Check
 `command -v mise` and `mise --version` after personalization. Version 3 removes
 the GitHub CLI, a breaking change for consumers that used it in-container.
 
@@ -135,14 +136,17 @@ back to main. Breaking feature changes still require a reviewed major bump.
 ## Contributing
 
 Organization changes go through pull requests following
-[the PR template](.github/PULL_REQUEST_TEMPLATE.md): a Conventional Commits title,
+[the org PR template](https://github.com/Rubio-Enterprises/.github/blob/main/.github/PULL_REQUEST_TEMPLATE.md):
+a Conventional Commits title,
 a linked work item, and What?, Why?, How? and Testing? sections. Use repository
 issues for questions and include the template's feedback and dependency context
 when relevant.
 
-Run `mise install` to provision the tools and hooks, and check Markdown with
-`mise exec -- markdownlint-cli2 README.md`. There is no `mise run lint` or
-`mise run test` task; use the feature test command above with a Docker daemon.
+Run `mise trust && mise bootstrap --only repos,tools --yes` to provision the
+Shared Config Checkout, tools and hooks. Run `mise run check` for all pre-commit
+checks, or check Markdown with `mise exec -- markdownlint-cli2 README.md`.
+There is no `mise run lint` or `mise run test` task; use the feature test command
+above with a Docker daemon.
 For changes under `src/<feature>/`, bump that feature's version in the same PR;
 removing an option or environment variable requires a major bump.
 
