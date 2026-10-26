@@ -10,7 +10,9 @@ No host personalization or live Dev Containers were changed.
 - Baseline is 3.0.0: removing the previously provided GitHub CLI breaks
   consumers that called it. Existing shims ownership and system git trust
   behavior remain unchanged.
-- mise is pinned to 2026.10.9, above the 2026.9.14 mirror floor.
+- mise was pinned to 2026.10.9, above the 2026.9.14 mirror floor.
+  Baseline 3.0.1 moves the pin to 2026.10.19, the `min_version` of the
+  standards native config model.
   The installer uses only fixed GitHub release download URLs.
 - Debian Trixie's minisign 0.12 verifies `SHASUMS256.txt.minisig` with the key
   published in [mise's installation documentation](https://mise.jdx.dev/installing-mise.html#github-releases)

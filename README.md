@@ -41,8 +41,9 @@ mise tasks
 
 It provides:
 
-- **Pinned, signature-verified mise** (2026.10.9), installed into
-  `/usr/local/bin` from GitHub release downloads for Linux arm64/x64. Debian's
+- **Pinned, signature-verified mise** (2026.10.19, the minimum for the
+  standards native config model), installed into `/usr/local/bin` from GitHub
+  release downloads for Linux arm64/x64. Debian's
   `minisign` verifies the checksum manifest against the pinned
   [upstream public key](https://mise.jdx.dev/installing-mise.html#github-releases),
   then SHA-256 verifies the tarball before extraction. Verification failures stop

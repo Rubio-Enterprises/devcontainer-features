@@ -10,12 +10,13 @@ set -e
 source dev-container-features-test-lib
 
 check "mise is installed" mise --version
-mise_version_is_supported() {
+mise_is_at_least() {
   local version
   version="$(mise --version | awk '{print $1}')"
-  [[ "$(printf '%s\n' 2026.9.14 "$version" | sort -V | head -n 1)" == 2026.9.14 ]]
+  [[ "$(printf '%s\n' "$1" "$version" | sort -V | head -n 1)" == "$1" ]]
 }
-check "mise is at least 2026.9.14 (API-free release metadata)" mise_version_is_supported
+check "mise is at least 2026.9.14 (API-free release metadata)" mise_is_at_least 2026.9.14
+check "mise is at least 2026.10.19 (standards native config min_version)" mise_is_at_least 2026.10.19
 check "mise uses the versions mirror" test "$(mise settings get use_versions_host)" = true
 check "gh is not installed" bash -c '! command -v gh'
 check "dotfiles install selects the personal profile" test "$DOTFILES_PROFILE" = personal
