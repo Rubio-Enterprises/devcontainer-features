@@ -4,7 +4,7 @@ set -eu
 install_mise() (
   # Renovate updates this pin and patch-bumps the feature version together.
   # renovate: datasource=github-releases depName=jdx/mise
-  MISE_VERSION=2026.10.9
+  MISE_VERSION=2026.10.19
   case "$(dpkg --print-architecture)" in
   arm64) arch=arm64 ;;
   amd64) arch=x64 ;;
