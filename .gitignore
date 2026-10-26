@@ -14,6 +14,8 @@ dist/
 build/
 coverage/
 reports/
+# Shared Config Checkout (ADR-0033), provisioned by `mise bootstrap --only repos,tools`.
+.standards-config/
 
 # Per-stack
 # <<< rubio-standards <<<
