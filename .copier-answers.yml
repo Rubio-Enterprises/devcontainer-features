@@ -34,7 +34,7 @@ is_claude_carrier: false
 is_marketplace: false
 is_public: true
 lint_hooks_workload_class: small
-project_name: devcontainer-features
+project_name: devcontainers
 repo_type: native
 supported_platforms: []
 typecheck_workload_class: small
