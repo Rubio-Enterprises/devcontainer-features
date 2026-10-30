@@ -16,6 +16,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Check Feature and collection publication identities
+        run: bash test/publication-namespace.sh
       - name: Install the Dev Container CLI
         run: npm install -g @devcontainers/cli@0.89.0
       - name: Test the baseline feature on the org base image
