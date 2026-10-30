@@ -26,5 +26,6 @@ jobs:
         with:
           publish-features: "true"
           base-path-to-features: ./src
+          features-namespace: rubio-enterprises/devcontainer-features
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
