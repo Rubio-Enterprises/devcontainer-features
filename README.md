@@ -1,6 +1,12 @@
-# devcontainer-features
+# devcontainers
 
-Dev Container Features for Rubio-Enterprises repositories, published to GHCR.
+Dev Container Features and public base images for Rubio-Enterprises repositories, published to GHCR.
+
+The source repository is `Rubio-Enterprises/devcontainers`. Existing Features
+and collection metadata keep their `ghcr.io/rubio-enterprises/devcontainer-features`
+namespace; the source rename does not change consumer references or lockfiles.
+Public base/base-ci images use `ghcr.io/rubio-enterprises/devcontainers/`
+(see [base images](docs/base-images.md)).
 
 ## Table of Contents
 

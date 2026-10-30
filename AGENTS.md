@@ -4,8 +4,11 @@ This repo follows Rubio-Enterprises standards. Run `/audit-standards` from a Cla
 
 Repo-specific context (in-progress migrations, gotchas, agent guidance):
 
-This repository publishes Dev Container Features to
-`ghcr.io/rubio-enterprises/devcontainer-features/<id>`. `baseline` is the org
+The `Rubio-Enterprises/devcontainers` source repository publishes Features to
+`ghcr.io/rubio-enterprises/devcontainer-features/<id>` and public base/base-ci
+images under `ghcr.io/rubio-enterprises/devcontainers/`. Keep the existing Feature
+and collection package namespace independent of the source repository name.
+See `docs/base-images.md` for image build/publication work. `baseline` is the org
 Dev Container baseline; the standards audit rule REPOSITORY-WORKSPACE-FILE
 requires every native repository to pin it. See `README.md` for what it
 provides, how to test it, and how releases work.
