@@ -116,6 +116,10 @@ without replacing the existing mise executable.
 
 ## Release
 
+The separate [base/base-ci image workflow](docs/base-images.md) reuses baseline
+without changing Feature package identities. Its first publication remains
+owner-gated.
+
 Bump `version` in `src/<feature>/devcontainer-feature.json` in the same pull
 request as the change. On merge, `.github/workflows/release.yaml` publishes
 every feature whose version is not in GHCR yet, tagged `MAJOR`,
