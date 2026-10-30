@@ -156,9 +156,108 @@ jobs:
           docker rm -fv "$REGISTRY_NAME" || true
           if [ -n "${LOCAL:-}" ]; then docker image rm "$LOCAL/base:build" "$LOCAL/base-ci:build" || true; fi
 
+  assemble:
+    name: Pair both architectures by base index
+    needs: build
+    permissions:
+      contents: read
+    runs-on: ${{ fromJSON(vars.RUNNERS || '{}').docker || fromJSON('["ubuntu-latest"]') }}
+    timeout-minutes: 30
+    env:
+      REGISTRY_NAME: base-images-assemble-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          repository: Rubio-Enterprises/.github
+          ref: 65f11ddf3b57a2dc4950db4c62cfb0d7ca28a724
+          path: .b1-contract
+          sparse-checkout: actions/repository-image/image.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: base-images-*
+          path: ${{ runner.temp }}/base-image-artifacts
+      - name: Assemble the base index and stamp paired CI config labels
+        run: |
+          set -euo pipefail
+          root="$RUNNER_TEMP/base-image-artifacts"
+          out="$RUNNER_TEMP/base-images-paired"
+          mkdir -p "$out"
+          docker run -d --rm --name "$REGISTRY_NAME" -p 127.0.0.1::5000 "$REGISTRY_IMAGE"
+          port=$(docker port "$REGISTRY_NAME" 5000/tcp)
+          local="localhost:${port##*:}/base-images"
+          for ((attempt=0; attempt<30; attempt++)); do
+            if curl --fail --silent "http://localhost:${port##*:}/v2/" >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent "http://localhost:${port##*:}/v2/" >/dev/null
+          crane() {
+            docker run --rm --network host --user "$(id -u):$(id -g)" \
+              -v "$root:/artifacts:ro" -v "$out:/out" "$CRANE_IMAGE" "$@"
+          }
+          for arch in amd64 arm64; do
+            directory="$root/base-images-$arch"
+            tar -C "$directory" -xf "$directory/oci-images.tar"
+            for image in base base-ci; do
+              expected=$(<"$directory/$image.digest")
+              [[ "$expected" =~ ^sha256:[0-9a-f]{64}$ ]]
+              crane push --insecure "/artifacts/base-images-$arch/$image" "$local/$image:$arch-raw"
+              test "$(crane digest --insecure "$local/$image:$arch-raw")" = "$expected"
+            done
+          done
+          crane index append --insecure -m "$local/base:amd64-raw" -m "$local/base:arm64-raw" -t "$local/base:index"
+          base_index=$(crane digest --insecure "$local/base:index")
+          [[ "$base_index" =~ ^sha256:[0-9a-f]{64}$ ]]
+          for arch in amd64 arm64; do
+            crane config --insecure "$local/base-ci:$arch-raw" > "$out/base-ci-$arch-before-config.json"
+            crane manifest --insecure "$local/base-ci:$arch-raw" > "$out/base-ci-$arch-before.json"
+            crane mutate --insecure "$local/base-ci:$arch-raw" \
+              --label "org.opencontainers.image.base.digest=$base_index" -t "$local/base-ci:$arch"
+            crane config --insecure "$local/base-ci:$arch" > "$out/base-ci-$arch-config.json"
+            crane manifest --insecure "$local/base-ci:$arch" > "$out/base-ci-$arch.json"
+            crane digest --insecure "$local/base-ci:$arch" > "$out/base-ci-$arch.digest"
+            crane config --insecure "$local/base:$arch-raw" > "$out/base-$arch-config.json"
+            crane manifest --insecure "$local/base:$arch-raw" > "$out/base-$arch.json"
+            cp "$root/base-images-$arch/base.digest" "$out/base-$arch.digest"
+          done
+          crane index append --insecure -m "$local/base-ci:amd64" -m "$local/base-ci:arm64" -t "$local/base-ci:index"
+          for image in base base-ci; do
+            digest=$(crane digest --insecure "$local/$image:index")
+            [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+            crane manifest --insecure "$local/$image@$digest" > "$out/$image-index.json"
+            printf '%s\n' "$digest" > "$out/$image.digest"
+          done
+          node test/base-image-pair.mjs .b1-contract/actions/repository-image/image.mjs "$out" "$base_index"
+          for image in base base-ci; do
+            digest=$(<"$out/$image.digest")
+            rm -rf "${out:?}/${image:?}"
+            crane pull --insecure --format oci "$local/$image@$digest" "/out/$image"
+            crane push --insecure "/out/$image" "$local/$image:transport-check"
+            test "$(crane digest --insecure "$local/$image:transport-check")" = "$digest"
+          done
+          tar -C "$out" -cf "$RUNNER_TEMP/paired-images.tar" .
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: paired-base-images
+          path: ${{ runner.temp }}/paired-images.tar
+          compression-level: 0
+          retention-days: 3
+          if-no-files-found: error
+      - name: Remove only the assembly registry
+        if: always()
+        run: docker rm -fv "$REGISTRY_NAME" || true
+
   publish:
     name: Publish both multi-architecture images
-    needs: build
+    needs: assemble
     if: >-
       contains(fromJSON('["push","workflow_dispatch"]'), github.event_name) &&
       github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
@@ -169,42 +268,30 @@ jobs:
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          pattern: base-images-*
+          name: paired-base-images
           path: ${{ runner.temp }}/base-image-artifacts
       - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-      - name: Publish the verified manifests without rewriting their digests
+      - name: Publish the paired indices without rewriting their digests
         run: |
           set -euo pipefail
           root="$RUNNER_TEMP/base-image-artifacts"
+          tar -C "$root" -xf "$root/paired-images.tar"
           auth="${DOCKER_CONFIG:-$HOME/.docker}"
-          for arch in amd64 arm64; do
-            directory="$root/base-images-$arch"
-            tar -C "$directory" -xf "$directory/oci-images.tar"
-            for image in base base-ci; do
-              digest=$(<"$directory/$image.digest")
-              [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
-              docker run --rm --user "$(id -u):$(id -g)" -e DOCKER_CONFIG=/auth \
-                -v "$directory:/images:ro" -v "$auth:/auth:ro" \
-                "$CRANE_IMAGE" push "/images/$image" "$IMAGE_ROOT/$image:sha-$GITHUB_SHA-$arch"
-              published=$(docker run --rm --user "$(id -u):$(id -g)" -e DOCKER_CONFIG=/auth \
-                -v "$auth:/auth:ro" "$CRANE_IMAGE" \
-                digest "$IMAGE_ROOT/$image:sha-$GITHUB_SHA-$arch")
-              test "$published" = "$digest"
-            done
+          for image in base base-ci; do
+            expected=$(<"$root/$image.digest")
+            [[ "$expected" =~ ^sha256:[0-9a-f]{64}$ ]]
+            docker run --rm --user "$(id -u):$(id -g)" -e DOCKER_CONFIG=/auth \
+              -v "$root:/images:ro" -v "$auth:/auth:ro" \
+              "$CRANE_IMAGE" push "/images/$image" "$IMAGE_ROOT/$image:sha-$GITHUB_SHA"
+            actual=$(docker run --rm --user "$(id -u):$(id -g)" -e DOCKER_CONFIG=/auth \
+              -v "$auth:/auth:ro" "$CRANE_IMAGE" digest "$IMAGE_ROOT/$image:sha-$GITHUB_SHA")
+            test "$actual" = "$expected"
           done
           for image in base base-ci; do
             docker run --rm --user "$(id -u):$(id -g)" -e DOCKER_CONFIG=/auth \
-              -v "$auth:/auth:ro" "$CRANE_IMAGE" index append \
-              -m "$IMAGE_ROOT/$image:sha-$GITHUB_SHA-amd64" \
-              -m "$IMAGE_ROOT/$image:sha-$GITHUB_SHA-arm64" \
-              -t "$IMAGE_ROOT/$image:sha-$GITHUB_SHA"
-          done
-          for image in base base-ci; do
-            docker run --rm --user "$(id -u):$(id -g)" -e DOCKER_CONFIG=/auth \
-              -v "$auth:/auth:ro" "$CRANE_IMAGE" \
-              tag "$IMAGE_ROOT/$image:sha-$GITHUB_SHA" latest
+              -v "$auth:/auth:ro" "$CRANE_IMAGE" tag "$IMAGE_ROOT/$image:sha-$GITHUB_SHA" latest
           done

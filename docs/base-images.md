@@ -38,35 +38,47 @@ fetch standards at runtime.
 
 ## Digest pairing for rebase
 
-The base is pushed only to an ephemeral job-local registry before resolving its
-**platform manifest digest**. Base-ci uses that immutable digest in `FROM`, not a
-moving tag, and records these standard OCI image labels:
+Each native job resolves its base **platform manifest digest** in an ephemeral
+local registry and uses that immutable digest in base-ci's `FROM`, not a moving
+tag. After both native jobs pass, a read-only assembly job constructs the base
+**multiarch index** and stamps these standard OCI image-config labels on each
+base-ci platform image with pinned crane's metadata-only mutation:
 
 - `org.opencontainers.image.base.name`:
   `ghcr.io/rubio-enterprises/devcontainers/base:latest`
-- `org.opencontainers.image.base.digest`: that architecture's exact
-  `sha256:<64 lowercase hex>` base manifest digest.
+- `org.opencontainers.image.base.digest`: the exact **base multiarch index**
+  digest, `sha256:<64 lowercase hex>`, identical on both base-ci architectures.
 
-A consumer must select the desired architecture from the published base index
-and compare **that platform manifest digest**, not the multiarch index digest,
-with the matching base-ci label before `crane rebase`. The name records the
-public base identity; the digest is the immutable pairing authority. Layer
-prefixes must also match. Rebase preserves the repository image's configuration:
-base-ci's USER/ENV/labels do not automatically replace it.
+The labels live in OCI config `config.Labels`, not manifest annotations. This
+matches `.github/actions/repository-image/image.mjs` at
+`65f11ddf3b57a2dc4950db4c62cfb0d7ca28a724`: its exported `validatePair`
+function is exercised against both assembled architectures. A platform child
+digest is deliberately rejected. Base/CI index platform membership is checked;
+compressed layers, rootfs diff IDs and runtime configuration stay identical to
+the native-smoked, secret-scanned inputs except the one digest label. The
+assembly step introduces no filesystem layer or arbitrary configuration value.
+
+Consumers compare the resolved base **index** digest to each base-ci config
+label and validate the same-platform layer prefixes before `crane rebase`.
+Rebase preserves the repository image's configuration: base-ci's USER/ENV/labels
+do not automatically replace it.
 
 OCI layouts preserve the exact manifests and compressed layer blobs across
-architecture jobs. The publishing job checks every pushed digest against the
-validated local digest before assembling the two multiarch indices. Do not
-replace this transport with Docker save/load, which need not preserve compressed
-manifest identities.
+architecture, assembly and publication jobs. Both final index layouts pass a
+job-local push/pull digest roundtrip before export. The publishing job verifies
+each pushed **index** digest before moving latest. Do not replace this transport
+with Docker save/load, which need not preserve compressed manifest identities.
+Use crane's default push of the layout's single index descriptor, not `--index`
+(which would publish the outer layout index instead).
 
 ## Publication boundary
 
 Pull requests only build, smoke, inspect and scan; they have no package-write
 permission or registry login. No standards-reader credential is needed. On a
 reviewed default-branch push (or manually authorized default-branch dispatch),
-a separate package-write job publishes only after **both** native jobs pass.
-It publishes commit-scoped `sha-<commit>` / `sha-<commit>-<arch>` references, then
+a separate package-write job publishes only after **both** native jobs and the
+read-only pairing assembly pass. It publishes commit-scoped `sha-<commit>`
+index references, then
 advances `latest` for each image. Registry tag updates are not transactional:
 consumers must enforce the pairing labels while resolving moving tags.
 
